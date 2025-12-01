@@ -161,10 +161,7 @@ typedef	int		__cpulevel_t;	/* level parameter for cpuset. */
 typedef int		__cpusetid_t;	/* cpuset identifier. */
 typedef __int64_t	__daddr_t;	/* bwrite(3), FIOBMAP2, etc */
 
-#ifndef __has_feature
-#define __has_feature(x)        0
-#endif
-#if !__has_feature(capabilities)
+#if !defined(__CHERI__) && !defined(__CHERI_HYBRID__)
 /*
  * On non-CHERI systems, define __(u)intcap_t to __(u)intptr_t so that
  * hybrid-C code which needs to be explicitly aware of capabilities can

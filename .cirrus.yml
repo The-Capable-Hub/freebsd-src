@@ -45,6 +45,7 @@ task:
       TARGET_ARCH: amd64
       TOOLCHAIN: llvm19
       TOOLCHAIN_PKG: ${TOOLCHAIN}-lite
+      
   - name: arm64-llvm16 World and kernel build and boot smoke test (manual)
     only_if: $CIRRUS_REPO_FULL_NAME != 'freebsd/freebsd-src'
     trigger_type: manual

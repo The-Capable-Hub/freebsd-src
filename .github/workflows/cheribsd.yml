@@ -1,0 +1,10 @@
+name: Run BSD Tests
+
+on:
+  push:
+    branches:
+      hcarter/1-convert-cirrus-yml-to-github-actions
+      TheCapableHub
+      cheri
+  pull_request_target:
+    types: [ opened, reopened, edited, synchronize ]

@@ -12,9 +12,6 @@ DPSRCS+= assym.inc
 SRCS+=	opt_acpi.h opt_hwpmc_hooks.h opt_kstack_pages.h
 .endif
 
-.if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64"
-SRCS+=	efirt_support.S
-DPSRCS+= assym.inc
 efirt_support.o:	efirt_support.S assym.inc
 	${CC} -c -x assembler-with-cpp -DLOCORE ${CFLAGS} \
 	    ${.IMPSRC} -o ${.TARGET}

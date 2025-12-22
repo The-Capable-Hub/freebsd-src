@@ -344,6 +344,7 @@ typedef struct {
 #define	EF_ARM_ABI_FLOAT_HARD	0x00000400
 #define	EF_ARM_VFP_FLOAT	EF_ARM_ABI_FLOAT_HARD /* Pre-V5 ABI name */
 #define	EF_ARM_MAVERICK_FLOAT	0x00000800
+#define	EF_AARCH64_CHERI_PURECAP	0x00010000
 
 #define	EF_MIPS_NOREORDER	0x00000001
 #define	EF_MIPS_PIC		0x00000002	/* Contains PIC code */
@@ -382,6 +383,8 @@ typedef struct {
 #define	EF_RISCV_FLOAT_ABI_QUAD	0x00000006
 #define	EF_RISCV_RVE		0x00000008
 #define	EF_RISCV_TSO		0x00000010
+#define	EF_RISCV_CHERIABI	0x00010000
+#define	EF_RISCV_CAPMODE	0x00020000
 
 /*
  * Loongson LoongArch Specific e_flags
@@ -550,6 +553,8 @@ typedef struct {
 #define	PT_PHDR		6	/* Location of program header itself. */
 #define	PT_TLS		7	/* Thread local storage segment */
 #define	PT_LOOS		0x60000000	/* First OS-specific. */
+#define	PT_C18N_NAME	0x64331380	/* Sub-object compartment. */
+#define	PT_CHERI_PCC	0x64348450	/* CHERI PCC bounds. */
 #define	PT_SUNW_UNWIND	0x6464e550	/* amd64 UNWIND program header */
 #define	PT_GNU_EH_FRAME	0x6474e550
 #define	PT_GNU_STACK	0x6474e551
@@ -564,12 +569,14 @@ typedef struct {
 #define	PT_HISUNW	0x6fffffff
 #define	PT_HIOS		0x6fffffff	/* Last OS-specific. */
 #define	PT_LOPROC	0x70000000	/* First processor-specific type. */
+#define	PT_AARCH64_MEMTAG_CHERI	(PT_LOPROC + 3)
 #define	PT_ARM_ARCHEXT	0x70000000	/* ARM arch compat information. */
 #define	PT_ARM_EXIDX	0x70000001	/* ARM exception unwind tables. */
 #define	PT_MIPS_REGINFO		0x70000000	/* MIPS register usage info */
 #define	PT_MIPS_RTPROC		0x70000001	/* MIPS runtime procedure tbl */
 #define	PT_MIPS_OPTIONS		0x70000002	/* MIPS e_flags value*/
 #define	PT_MIPS_ABIFLAGS	0x70000003	/* MIPS fp mode */
+#define	PT_RISCV_MEMTAG_CHERI	0x7fffffff
 #define	PT_HIPROC	0x7fffffff	/* Last processor-specific type. */
 
 #define	PT_OPENBSD_RANDOMIZE	0x65A3DBE6	/* OpenBSD random data segment */
@@ -645,6 +652,8 @@ typedef struct {
 #define	DT_SUNW_FILTER		0x6000000f	/* symbol filter name */
 #define	DT_SUNW_CAP		0x60000010	/* hardware/software */
 #define	DT_SUNW_ASLR		0x60000023	/* ASLR control */
+#define	DT_C18N_STRTAB		0x64331380	/* Compartment string table */
+#define	DT_C18N_STRTABSZ	0x64331381	/* Compartment string table size */
 #define	DT_HIOS		0x6ffff000	/* Last OS-specific */
 
 /*
@@ -765,6 +774,9 @@ typedef struct {
 #define	DT_PPC64_OPDSZ			0x70000002
 #define	DT_PPC64_TLSOPT			0x70000003
 
+#define	DT_RISCV_CHERI___CAPRELOCS	0x7000c000 /* start of __cap_relocs section */
+#define	DT_RISCV_CHERI___CAPRELOCSSZ	0x7000c001 /* size of __cap_relocs section */
+
 #define	DT_AUXILIARY	0x7ffffffd	/* shared library auxiliary name */
 #define	DT_USED		0x7ffffffe	/* ignored - same as needed */
 #define	DT_FILTER	0x7fffffff	/* shared library filter name */
@@ -811,6 +823,7 @@ typedef struct {
 #define	ELF_NOTE_NETBSD		"NetBSD"
 #define	ELF_NOTE_SOLARIS	"SUNW Solaris"
 #define	ELF_NOTE_GNU		"GNU"
+#define	ELF_NOTE_CHERI		"CHERI"
 
 /* Values for n_type used in executables. */
 #define	NT_FREEBSD_ABI_TAG	1
@@ -871,6 +884,9 @@ typedef struct {
 
 #define	GNU_PROPERTY_X86_FEATURE_1_IBT		0x00000001
 #define	GNU_PROPERTY_X86_FEATURE_1_SHSTK	0x00000002
+
+/* CHERI note types. */
+#define	NT_CHERI_MORELLO_PURECAP_BENCHMARK_ABI	0x80000000
 
 /* Symbol Binding - ELFNN_ST_BIND - st_info */
 #define	STB_LOCAL	0	/* Local symbol */
@@ -1090,6 +1106,22 @@ typedef struct {
 #define	R_AARCH64_TLS_TPREL64	1030
 #define	R_AARCH64_TLSDESC	1031	/* Identify the TLS descriptor */
 #define	R_AARCH64_IRELATIVE	1032
+
+#define	R_MORELLO_CAPINIT	59392
+#define	R_MORELLO_GLOB_DAT	59393
+#define	R_MORELLO_JUMP_SLOT	59394
+#define	R_MORELLO_RELATIVE	59395
+#define	R_MORELLO_IRELATIVE	59396
+#define	R_MORELLO_TLSDESC	59397
+#define	R_MORELLO_TLS_TPREL128	59398
+#define	R_MORELLO_FUNC_RELATIVE	59400
+#define	R_AARCH64_FUNC_RELATIVE	59401
+
+#ifdef __CHERI__
+#define	MORELLO_FRAG_EXECUTABLE	0x4
+#define	MORELLO_FRAG_RWDATA	0x2
+#define	MORELLO_FRAG_RODATA	0x1
+#endif
 
 #define	R_ARM_NONE		0	/* No relocation. */
 #define	R_ARM_PC24		1
@@ -1411,6 +1443,10 @@ typedef struct {
 #define	R_RISCV_TLSDESC_CALL	65
 #define	R_RISCV_VENDOR		191
 
+/* Relocation types added by CHERI */
+#define	R_RISCV_CHERI_CAPABILITY	193
+#define	R_RISCV_FUNC_RELATIVE		194
+
 /*
  * Loongson LoongArch relocation types.
  *
@@ -1693,5 +1729,18 @@ typedef struct {
 
 #define	ELF_BSDF_SIGFASTBLK	0x0001	/* Kernel supports fast sigblock */
 #define	ELF_BSDF_VMNOOVERCOMMIT	0x0002
+#define	ELF_BSDF_CHERI_C18N	0x10000000
+#define	ELF_BSDF_CHERI_REVOKE_ASYNC	0x20000000	/* Async revocation */
+#define	ELF_BSDF_CHERI_REVOKE_EVERY_FREE	0x40000000
+#define	ELF_BSDF_CHERI_REVOKE	0x80000000	/* Process should quarantine */
 
 #endif /* !_SYS_ELF_COMMON_H_ */
+// CHERI CHANGES START
+// {
+//   "updated": 20230509,
+//   "target_type": "header",
+//   "changes": [
+//     "support"
+//   ]
+// }
+// CHERI CHANGES END

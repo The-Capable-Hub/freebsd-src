@@ -297,15 +297,15 @@ EEND(fueword64)
 
 #ifdef __CHERI__
 /*
- * int fuecap(volatile const void *, intptr_t *)
+ * int fueptr(volatile const void *, intptr_t *)
  */
-ENTRY(fuecap)
+ENTRY(fueptr)
 	check_user_access 0, (VM_MAXUSER_ADDRESS-15), fsu_fault_nopcb
 	fsudata	ldtr, c0, 0
 	str	c0, [PTR(1)]		/* Save the data in kernel space */
 	mov	x0, #0			/* Success */
 	ret				/* Return */
-END(fuecap)
+END(fueptr)
 #endif
 
 /*
@@ -352,14 +352,14 @@ EEND(suword64)
 
 #ifdef __CHERI__
 /*
- * int sucap(volatile void *, intptr_t)
+ * int suptr(volatile void *, intptr_t)
  */
-ENTRY(sucap)
+ENTRY(suptr)
 	check_user_access 0, (VM_MAXUSER_ADDRESS-15), fsu_fault_nopcb
 	fsudata	sttr, c1, 0
 	mov	x0, #0			/* Success */
 	ret				/* Return */
-END(sucap)
+END(suptr)
 #endif
 
 ENTRY(setjmp)

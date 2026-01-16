@@ -92,23 +92,36 @@
 #include <machine/vfp.h>
 #endif
 
+#ifdef __CHERI__
+#include <cheri/cheri.h>
+#endif
+
 #ifdef DEV_ACPI
 #include <contrib/dev/acpica/include/acpi.h>
 #include <machine/acpica_machdep.h>
 #endif
 
 #ifdef FDT
+#include <contrib/libfdt/libfdt.h>
 #include <dev/fdt/fdt_common.h>
 #include <dev/ofw/openfirm.h>
 #endif
 
 #include <dev/smbios/smbios.h>
 
+#ifdef __CHERI__
+_Static_assert(sizeof(struct pcb) == 1472, "struct pcb is incorrect size");
+_Static_assert(offsetof(struct pcb, pcb_fpusaved) == 336,
+    "pcb_fpusaved changed offset");
+_Static_assert(offsetof(struct pcb, pcb_fpustate) == 416,
+    "pcb_fpustate changed offset");
+#else
 _Static_assert(sizeof(struct pcb) == 1248, "struct pcb is incorrect size");
 _Static_assert(offsetof(struct pcb, pcb_fpusaved) == 136,
     "pcb_fpusaved changed offset");
 _Static_assert(offsetof(struct pcb, pcb_fpustate) == 192,
     "pcb_fpustate changed offset");
+#endif
 
 enum arm64_bus arm64_bus_method = ARM64_BUS_NONE;
 
@@ -436,7 +449,7 @@ makectx(struct trapframe *tf, struct pcb *pcb)
 }
 
 static void
-init_proc0(vm_offset_t kstack)
+init_proc0(vm_pointer_t kstack)
 {
 	struct pcpu *pcpup;
 
@@ -444,7 +457,8 @@ init_proc0(vm_offset_t kstack)
 	MPASS(pcpup != NULL);
 
 	proc_linkup0(&proc0, &thread0);
-	thread0.td_kstack = kstack;
+	thread0.td_kstack =
+	    cheri_kern_perms_and(kstack, CHERI_PERMS_KERNEL_DATA);
 	thread0.td_kstack_pages = KSTACK_PAGES;
 #if defined(PERTHREAD_SSP)
 	thread0.td_md.md_canary = boot_canary;
@@ -456,7 +470,9 @@ init_proc0(vm_offset_t kstack)
 	thread0.td_pcb->pcb_fpusaved = &thread0.td_pcb->pcb_fpustate;
 	thread0.td_pcb->pcb_vfpcpu = UINT_MAX;
 	thread0.td_frame = &proc0_tf;
+#ifdef PAC
 	ptrauth_thread0(&thread0);
+#endif
 	pcpup->pc_curpcb = thread0.td_pcb;
 
 	/*
@@ -619,9 +635,16 @@ exclude_efi_memreserve(vm_paddr_t efi_systbl_phys)
 static void
 try_load_dtb(void)
 {
-	vm_offset_t dtbp;
+	vm_pointer_t dtbp;
 
 	dtbp = MD_FETCH(preload_kmdp, MODINFOMD_DTBP, vm_offset_t);
+#ifdef __CHERI__
+	if (dtbp != (vm_pointer_t)NULL) {
+		dtbp = (vm_pointer_t)cheri_perms_and(cheri_address_set(
+		    kernel_root_cap, dtbp), CHERI_PERMS_KERNEL_DATA);
+		dtbp = cheri_bounds_set(dtbp, fdt_totalsize((void *)dtbp));
+	}
+#endif
 #if defined(FDT_DTB_STATIC)
 	/*
 	 * In case the device tree blob was not retrieved (from metadata) try
@@ -986,6 +1009,14 @@ DB_SHOW_COMMAND(specialregs, db_show_spregs)
 #define	PRINT_REG(reg)	\
     db_printf(__STRING(reg) " = %#016lx\n", READ_SPECIALREG(reg))
 
+#ifdef __CHERI__
+#define	PRINT_REG_CAP(reg)					\
+do {								\
+	void *_tmp = (void *)READ_SPECIALREG_CAP(reg);		\
+	db_printf(__STRING(reg) " = %#.16lp\n", _tmp);		\
+} while(0)
+#endif
+
 	PRINT_REG(actlr_el1);
 	PRINT_REG(afsr0_el1);
 	PRINT_REG(afsr1_el1);
@@ -993,6 +1024,9 @@ DB_SHOW_COMMAND(specialregs, db_show_spregs)
 	PRINT_REG(amair_el1);
 	PRINT_REG(ccsidr_el1);
 	PRINT_REG(clidr_el1);
+#ifdef __CHERI__
+	PRINT_REG(cctlr_el0);
+#endif
 	PRINT_REG(contextidr_el1);
 	PRINT_REG(cpacr_el1);
 	PRINT_REG(csselr_el1);
@@ -1047,13 +1081,28 @@ DB_SHOW_COMMAND(specialregs, db_show_spregs)
 	PRINT_REG(spsel);
 	PRINT_REG(spsr_el1);
 	PRINT_REG(tcr_el1);
+#ifdef __CHERI__
+	PRINT_REG_CAP(ctpidr_el0);
+#else
 	PRINT_REG(tpidr_el0);
+#endif
 	PRINT_REG(tpidr_el1);
+#ifdef __CHERI__
+	PRINT_REG_CAP(ctpidrro_el0);
+#else
 	PRINT_REG(tpidrro_el0);
+#endif
 	PRINT_REG(ttbr0_el1);
 	PRINT_REG(ttbr1_el1);
+#ifdef __CHERI__
+	PRINT_REG_CAP(cvbar_el1);
+#else
 	PRINT_REG(vbar_el1);
+#endif
 #undef PRINT_REG
+#ifdef __CHERI__
+#undef PRINT_REG_CAP
+#endif
 }
 
 DB_SHOW_COMMAND(vtop, db_show_vtop)

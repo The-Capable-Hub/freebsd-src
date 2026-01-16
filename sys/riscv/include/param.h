@@ -37,7 +37,7 @@
 #include <sys/_align.h>
 
 #define	STACKALIGNBYTES	(16 - 1)
-#define	STACKALIGN(p)	((uint64_t)(p) & ~STACKALIGNBYTES)
+#define	STACKALIGN(p)	(__builtin_align_down((p), STACKALIGNBYTES + 1))
 
 #ifndef MACHINE
 #define	MACHINE		"riscv"

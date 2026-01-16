@@ -88,7 +88,7 @@ linux_page_address(const struct page *page)
 
 	if (page->object != kernel_object) {
 		return (PMAP_HAS_DMAP ?
-		    ((void *)(uintptr_t)PHYS_TO_DMAP(page_to_phys(page))) :
+		    ((void *)(uintptr_t)PHYS_TO_DMAP_PAGE(page_to_phys(page))) :
 		    NULL);
 	}
 	return ((void *)(uintptr_t)(VM_MIN_KERNEL_ADDRESS +
@@ -137,7 +137,7 @@ linux_alloc_pages(gfp_t flags, unsigned int order)
 			}
 		}
 	} else {
-		vm_offset_t vaddr;
+		vm_pointer_t vaddr;
 
 		vaddr = linux_alloc_kmem(flags, order);
 		if (vaddr == 0)
@@ -145,7 +145,7 @@ linux_alloc_pages(gfp_t flags, unsigned int order)
 
 		page = virt_to_page((void *)vaddr);
 
-		KASSERT(vaddr == (vm_offset_t)page_address(page),
+		KASSERT(vaddr == (vm_pointer_t)page_address(page),
 		    ("Page address mismatch"));
 	}
 
@@ -153,7 +153,7 @@ linux_alloc_pages(gfp_t flags, unsigned int order)
 }
 
 static void
-_linux_free_kmem(vm_offset_t addr, unsigned int order)
+_linux_free_kmem(vm_pointer_t addr, unsigned int order)
 {
 	size_t size = ((size_t)PAGE_SIZE) << order;
 
@@ -190,9 +190,9 @@ linux_free_pages(struct page *page, unsigned int order)
 			}
 		}
 	} else {
-		vm_offset_t vaddr;
+		vm_pointer_t vaddr;
 
-		vaddr = (vm_offset_t)page_address(page);
+		vaddr = (vm_pointer_t)page_address(page);
 
 		_linux_free_kmem(vaddr, order);
 	}
@@ -209,7 +209,7 @@ linux_release_pages(release_pages_arg arg, int nr)
 		__free_page(arg.pages[i]);
 }
 
-vm_offset_t
+vm_pointer_t
 linux_alloc_kmem(gfp_t flags, unsigned int order)
 {
 	size_t size = ((size_t)PAGE_SIZE) << order;
@@ -219,11 +219,11 @@ linux_alloc_kmem(gfp_t flags, unsigned int order)
 	    ((flags & GFP_DMA32) == 0) ? -1UL : BUS_SPACE_MAXADDR_32BIT,
 	    PAGE_SIZE, 0, VM_MEMATTR_DEFAULT);
 
-	return ((vm_offset_t)addr);
+	return ((vm_pointer_t)addr);
 }
 
 void
-linux_free_kmem(vm_offset_t addr, unsigned int order)
+linux_free_kmem(vm_pointer_t addr, unsigned int order)
 {
 	KASSERT((addr & ~PAGE_MASK) == 0,
 	    ("%s: addr %p is not page aligned", __func__, (void *)addr));
@@ -253,25 +253,33 @@ linux_get_user_pages_internal(vm_map_t map, void *start, int nr_pages,
 }
 
 int
-__get_user_pages_fast(unsigned long start, int nr_pages, int write,
+__get_user_pages_fast(void *addr, int nr_pages, int write,
     struct page **pages)
 {
 	vm_map_t map;
 	vm_page_t *mp;
+	vm_offset_t start;
 	vm_offset_t va;
 	vm_offset_t end;
+	vm_size_t len;
 	vm_prot_t prot;
 	int count;
 
 	if (nr_pages == 0 || in_interrupt())
 		return (0);
 
+	prot = write ? (VM_PROT_READ | VM_PROT_WRITE) : VM_PROT_READ;
+	len = ptoa((vm_offset_t)nr_pages);
+#ifdef __CHERI__
+	if (!cheri_can_access(addr, vm_map_prot2perms(prot), len))
+		return (-1);
+#endif
 	MPASS(pages != NULL);
 	map = &curthread->td_proc->p_vmspace->vm_map;
-	end = start + ptoa((vm_offset_t)nr_pages);
+	start = (vm_offset_t)addr;
+	end = start + len;
 	if (!vm_map_range_valid(map, start, end))
 		return (-EINVAL);
-	prot = write ? (VM_PROT_READ | VM_PROT_WRITE) : VM_PROT_READ;
 	for (count = 0, mp = pages, va = start; va < end;
 	    mp++, va += PAGE_SIZE, count++) {
 		*mp = pmap_extract_and_hold(map->pmap, va, prot);

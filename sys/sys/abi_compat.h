@@ -29,6 +29,10 @@
 #ifndef _COMPAT_H_
 #define	_COMPAT_H_
 
+#ifdef __CHERI__
+#include <cheri/cheri.h>
+#endif
+
 /*
  * Helper macros for translating objects between different ABIs.
  */

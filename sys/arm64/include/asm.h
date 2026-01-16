@@ -69,7 +69,7 @@
 #define	PIC_SYM(x,y)	x
 #endif
 
-#define	INT_WIDTH	8
+#define	_INT_WIDTH	8
 #define	INTN(n)		n
 #define	INT(n)		x ## n
 
@@ -78,7 +78,7 @@
 #define	CAPN(n)		c ## n
 #define	CAP(n)		c ## n
 #else
-#define	CAP_WIDTH	INT_WIDTH
+#define	CAP_WIDTH	_INT_WIDTH
 #define	CAPN(n)		INTN(n)
 #define	CAP(n)		INT(n)
 #endif
@@ -90,7 +90,7 @@
 /* Alias for link register c30 */
 #define	clr		c30
 #else
-#define	PTR_WIDTH	INT_WIDTH
+#define	PTR_WIDTH	_INT_WIDTH
 #define	PTRN(n)		INTN(n)
 #define	PTR(n)		INT(n)
 /* Alias for link register x30 */

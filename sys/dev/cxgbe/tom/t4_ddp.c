@@ -2162,7 +2162,7 @@ t4_free_ppod_region(struct ppod_region *pr)
 }
 
 static int
-pscmp(struct pageset *ps, struct vmspace *vm, vm_offset_t start, int npages,
+pscmp(struct pageset *ps, struct vmspace *vm, void *start, int npages,
     int pgoff, int len)
 {
 

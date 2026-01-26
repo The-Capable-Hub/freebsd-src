@@ -337,9 +337,6 @@ CFLAGS+=	-Xclang -morello-vararg=new -Xclang -morello-bounded-memargs
 . if ${MACHINE_ARCH:Maarch64*c*}
 CFLAGS+=	-mabi=purecap
 LDFLAGS+=	-mabi=purecap
-. else
-CFLAGS+=	-mabi=aapcs
-LDFLAGS+=	-mabi=aapcs
 . endif
 .endif
 

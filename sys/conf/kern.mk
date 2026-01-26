@@ -159,8 +159,6 @@ LDFLAGS+=	-cheri-codeptr-relocs
 
 .if ${MACHINE_ARCH:Maarch*c*}
 CFLAGS+=	-mabi=purecap
-.else
-CFLAGS+=	-mabi=aapcs
 .endif
 .endif
 

@@ -40,12 +40,10 @@ on:
 jobs:
   build:
     name: "Smoke testing ${{ inputs.target_arch }}-${{ inputs.toolchain }}"
-    runs-on: self-hosted
-    # runs-on: the-capable-hub-aws-ci
+    # runs-on: self-hosted
+    runs-on: the-capable-hub-aws-ci
     container:
       image: docker.io/hcartertgp/anyvm-with-curl:latest
-      # image: ghcr.io/the-capable-hub/cheri-freebsd-vm:latest
-      # image: ghcr.io/anyvm-org/anyvm:v0.0.5
     steps:
       - name: "Checkout freebsd-src"
         uses: actions/checkout@v4
@@ -94,9 +92,9 @@ jobs:
         env:
           freebsd_version: ${{ inputs.freebsd_version }}
         id: freebsd-restore-from-cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/restore@v4
         with:
-          path:
+          path: |
             ${{ inputs.anyvm_data }}
             ${{ inputs.anyvm_cache }}
           key:
@@ -159,13 +157,20 @@ jobs:
             exit 1
           fi
 
+      - name: "Visually verify existence of dirs to cache"
+        run: |
+          echo "ls anyvm_data"
+          ls ${{ inputs.anyvm_data }}
+          echo "ls anyvm_cache"
+          ls ${{ inputs.anyvm_cache }}
+
       - name: "Save Cache for freebsd-${{ inputs.freebsd_version }} VM"
         id: freebsd-save-to-cache-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/save@v4
         env:
           freebsd_version: ${{ inputs.freebsd_version }}
         with:
-          path:
+          path: |
             ${{ inputs.anyvm_data }}
             ${{ inputs.anyvm_cache }}
           key:

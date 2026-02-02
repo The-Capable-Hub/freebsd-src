@@ -6,8 +6,9 @@ on:
     types: [created, deleted]
   push:
     branches:
-      TheCapableHub
-      cheri
+      - TheCapableHub
+      - cheri
+      - test-workflow-hcarter5
   pull_request_target:
     types: [ opened, reopened, edited, synchronize ]
 
@@ -24,7 +25,7 @@ jobs:
             target_arch: aarch64
           - arch: amd64
             target_arch: amd64
-    uses: The-Capable-Hub/freebsd-src/.github/workflows/freebsd-vm-build.yml@hcarter/1-convert-cirrus-yml-to-github-actions
+    uses: The-Capable-Hub/freebsd-src/.github/workflows/freebsd-vm-build.yml@hcarter/5-use-docker
     with:
       arch: ${{ matrix.arch }}
       toolchain: ${{ matrix.toolchain }}
@@ -44,14 +45,14 @@ jobs:
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
-        toolchain: [gcc12, gcc13, gcc14]
+        toolchain: [gcc14]
         include:
           - extra_make_flags: -s
           - arch: arm64
             target_arch: aarch64
           - arch: amd64
             target_arch: amd64
-    uses: The-Capable-Hub/freebsd-src/.github/workflows/freebsd-vm-build.yml@hcarter/1-convert-cirrus-yml-to-github-actions
+    uses: The-Capable-Hub/freebsd-src/.github/workflows/freebsd-vm-build.yml@test-workflow-hcarter5
     with:
       arch: ${{ matrix.arch }}
       toolchain: ${{ matrix.toolchain }}

@@ -4,37 +4,37 @@ on:
   workflow_call:
     inputs:
       arch:
-        required: false
+        required: true
         type: string
       extra_make_flags:
-        required: false
+        required: true
         type: string
       target_arch:
-        required: false
+        required: true
         type: string
       toolchain:
         required: true
         type: string
       freebsd_version:
-        required: false
+        required: true
         type: string
       anyvm_builder_version:
-        required: false
+        required: true
         type: string
       cpus:
-        required: false
+        required: true
         type: string
       mem:
-        required: false
+        required: true
         type: string
       anyvm_data:
-        required: false
+        required: true
         type: string
       anyvm_cache:
-        required: false
+        required: true
         type: string
       project_root:
-        required: false
+        required: true
         type: string
 
 jobs:
@@ -43,7 +43,8 @@ jobs:
     runs-on: self-hosted
     # runs-on: the-capable-hub-aws-ci
     container:
-      image: fbvmc:latest
+      image: docker.io/hcartertgp/anyvm-with-curl:latest
+      # image: ghcr.io/the-capable-hub/cheri-freebsd-vm:latest
       # image: ghcr.io/anyvm-org/anyvm:v0.0.5
     steps:
       - name: "Checkout freebsd-src"
@@ -85,16 +86,29 @@ jobs:
             echo "CROSS_TOOLCHAIN=${{ inputs.toolchain }}" >> $GITHUB_ENV
             echo "EXTRA_BUILD_ARGS=--cross-bindir=/usr/local/${{ inputs.toolchain }}/bin" >> $GITHUB_ENV
             echo "BUILD_ROUTE=--ca_build_path" >> $GITHUB_ENV
+
       - name: Get NPROC
         run: echo "NPROC=`getconf _NPROCESSORS_ONLN 2>/dev/null || getconf NPROCESSORS_ONLN 2>/dev/null || echo 1`" >> $GITHUB_ENV
+
+      - name: "Restore Cache for freebsd-${{ inputs.freebsd_version }} VM"
+        env:
+          freebsd_version: ${{ inputs.freebsd_version }}
+        id: freebsd-restore-from-cache
+        uses: actions/cache/save@v4
+        with:
+          path:
+            ${{ inputs.anyvm_data }}
+            ${{ inputs.anyvm_cache }}
+          key:
+            freebsd-${{ inputs.freebsd_version }}
+
       - name: "Do BSD VM Build"
         env:
           PKG: python3
         run: |
-          # apt-get update; apt-get -yy --no-install-recommends install curl
-          # mkdir -p ${{ inputs.anyvm_data }}
-          # mkdir -p ${{ inputs.anyvm_cache }}
-          # curl -s https://raw.githubusercontent.com/anyvm-org/anyvm/v0.2.0/anyvm.py -o ${{ inputs.anyvm_data }}/anyvm.py
+          mkdir -p ${{ inputs.anyvm_data }}
+          mkdir -p ${{ inputs.anyvm_cache }}
+          curl -s https://raw.githubusercontent.com/anyvm-org/anyvm/v0.2.0/anyvm.py -o ${{ inputs.anyvm_data }}/anyvm.py
           python3 ${{ inputs.anyvm_data }}/anyvm.py \
             --snapshot --os freebsd --release ${{ inputs.freebsd_version }} \
             --builder ${{ inputs.anyvm_builder_version }} --arch x86_64 \
@@ -145,3 +159,14 @@ jobs:
             exit 1
           fi
 
+      - name: "Save Cache for freebsd-${{ inputs.freebsd_version }} VM"
+        id: freebsd-save-to-cache-cache
+        uses: actions/cache/restore@v4
+        env:
+          freebsd_version: ${{ inputs.freebsd_version }}
+        with:
+          path:
+            ${{ inputs.anyvm_data }}
+            ${{ inputs.anyvm_cache }}
+          key:
+            freebsd-${{ env.freebsd_version }}
